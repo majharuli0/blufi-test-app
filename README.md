@@ -1,50 +1,83 @@
-# Welcome to your Expo app 👋
+# Blufi Integration Kit for React Native
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This kit contains everything you need to add Espressif Blufi (Wi-Fi Provisioning) support to your React Native app (iOS & Android).
 
-## Get started
+## 📦 Contents
+*   `ios-reference/`: Native iOS source files (Swift/Obj-C) and Podspec.
+*   `scripts/`: Automation scripts for setting up Android and iOS.
+*   `BlufiClient.ts`: A ready-to-use TypeScript client for managing the connection.
 
-1. Install dependencies
+## 🚀 Installation Guide
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Copy Files
+Copy the contents of this folder (`ios-reference`, `scripts`, `BlufiClient.ts`) into the **root** of your React Native project.
 
 ```bash
-npm run reset-project
+cp -r blufi-kit/* /path/to/your/project/
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Install Dependencies
+Ensure you have the required packages installed:
+```bash
+npm install react-native-permissions
+```
 
-## Learn more
+### 3. Configure `package.json`
+Add the setup scripts to your `package.json` under the `"scripts"` section:
 
-To learn more about developing your project with Expo, look at the following resources:
+```json
+"scripts": {
+  "setup:ios": "node scripts/setup-ios.js",
+  "setup:android": "node scripts/setup-android.js"
+}
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 4. Run Setup
+Run the setup commands to generate the native code and configuration.
 
-## Join the community
+**For iOS:**
+```bash
+# 1. Generate iOS project (if not already done)
+npx expo prebuild --platform ios
 
-Join our community of developers creating universal apps.
+# 2. Run the setup script
+npm run setup:ios
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# 3. Install Pods
+cd ios && pod install && cd ..
+```
+
+**For Android:**
+```bash
+# 1. Generate Android project (if not already done)
+npx expo prebuild --platform android
+
+# 2. Run the setup script
+npm run setup:android
+```
+
+### 5. Usage
+Import `BlufiClient` in your code and use it to connect and provision devices.
+
+```typescript
+import { BlufiClient } from './BlufiClient';
+
+// Initialize
+const blufi = BlufiClient.getInstance();
+
+// Scan
+blufi.startScan((device) => {
+  console.log('Found:', device.name);
+});
+
+// Connect & Provision
+await blufi.connect(deviceMac);
+await blufi.negotiateSecurity();
+await blufi.configureWifi('SSID', 'PASSWORD');
+```
+
+## 🛠 Troubleshooting
+
+*   **iOS Build Error (Developer Mode)**: Go to Settings > Privacy & Security > Developer Mode on your iPhone and enable it.
+*   **iOS Runtime Error (Module not found)**: Ensure you ran `pod install` inside `ios/` after running `npm run setup:ios`.
+*   **Android Build Error**: Ensure `npx expo prebuild` was run to create the `android` folder before running `setup:android`.
