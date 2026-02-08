@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,15 +14,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
+  View,
+} from "react-native";
 
 const { BlufiBridge, BluetoothScannerModule } = NativeModules;
 const blufiEmitter = BlufiBridge ? new NativeEventEmitter(BlufiBridge) : null;
-const scannerEmitter = BluetoothScannerModule ? new NativeEventEmitter(BluetoothScannerModule) : null;
+const scannerEmitter = BluetoothScannerModule
+  ? new NativeEventEmitter(BluetoothScannerModule)
+  : null;
 
 // --- Types ---
-type WizardStep = 'SCAN' | 'WIFI' | 'PROVISION';
+type WizardStep = "SCAN" | "WIFI" | "PROVISION";
 
 interface BlufiDevice {
   name: string;
@@ -38,36 +40,38 @@ interface WifiNetwork {
 interface LogEntry {
   id: string;
   msg: string;
-  type: 'info' | 'error' | 'success';
+  type: "info" | "error" | "success";
 }
 
 // --- Constants ---
 const THEME = {
-  primary: '#007AFF',
-  success: '#34C759',
-  error: '#FF3B30',
-  background: '#F2F2F7',
-  card: '#FFFFFF',
-  text: '#000000',
-  textSecondary: '#8E8E93',
-  border: '#C6C6C8',
+  primary: "#007AFF",
+  success: "#34C759",
+  error: "#FF3B30",
+  background: "#F2F2F7",
+  card: "#FFFFFF",
+  text: "#000000",
+  textSecondary: "#8E8E93",
+  border: "#C6C6C8",
 };
 
 export default function ProvisioningWizard() {
   // --- State ---
-  const [step, setStep] = useState<WizardStep>('SCAN');
+  const [step, setStep] = useState<WizardStep>("SCAN");
 
   // Scan Step
   const [devices, setDevices] = useState<BlufiDevice[]>([]);
   const [isScanning, setIsScanning] = useState(false);
-  const [filterUid, setFilterUid] = useState('');
+  const [filterUid, setFilterUid] = useState("");
 
   // Wifi Step
-  const [selectedDevice, setSelectedDevice] = useState<BlufiDevice | null>(null);
-  const [ssid, setSsid] = useState('TP-Link_AD75');
-  const [password, setPassword] = useState('82750152');
-  const [mqttIp, setMqttIp] = useState('3.104.3.162');
-  const [mqttPort, setMqttPort] = useState('1060');
+  const [selectedDevice, setSelectedDevice] = useState<BlufiDevice | null>(
+    null,
+  );
+  const [ssid, setSsid] = useState("TP-Link_AD75");
+  const [password, setPassword] = useState("82750152");
+  const [mqttIp, setMqttIp] = useState("3.104.3.162");
+  const [mqttPort, setMqttPort] = useState("1060");
 
   // Wifi Scan (New)
   const [wifiList, setWifiList] = useState<WifiNetwork[]>([]);
@@ -75,27 +79,42 @@ export default function ProvisioningWizard() {
   const [showWifiList, setShowWifiList] = useState(false);
 
   // Provision Step
-  const [provisionState, setProvisionState] = useState<'IDLE' | 'CONNECTING' | 'NEGOTIATING' | 'CONFIGURING' | 'WAITING' | 'DONE' | 'ERROR'>('IDLE');
+  const [provisionState, setProvisionState] = useState<
+    | "IDLE"
+    | "CONNECTING"
+    | "NEGOTIATING"
+    | "CONFIGURING"
+    | "WAITING"
+    | "DONE"
+    | "ERROR"
+  >("IDLE");
   // State
   const [connectedMac, setConnectedMac] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   // --- Helpers ---
-  const addLog = (msg: string, type: 'info' | 'error' | 'success' = 'info') => {
-    setLogs(prev => [{ id: Date.now().toString() + Math.random(), msg, type }, ...prev]);
+  const addLog = (msg: string, type: "info" | "error" | "success" = "info") => {
+    setLogs((prev) => [
+      { id: Date.now().toString() + Math.random(), msg, type },
+      ...prev,
+    ]);
   };
 
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   // Helper to wait for a specific log message (Status or Log)
-  const waitForStatus = (statusKeyword: string, timeoutMs: number = 10000): Promise<boolean> => {
+  const waitForStatus = (
+    statusKeyword: string,
+    timeoutMs: number = 10000,
+  ): Promise<boolean> => {
     return new Promise((resolve) => {
       let resolved = false;
       let listeners: any[] = [];
 
       const cleanup = () => {
         resolved = true;
-        listeners.forEach(l => l.remove());
+        listeners.forEach((l) => l.remove());
         clearTimeout(timer);
       };
 
@@ -115,8 +134,14 @@ export default function ProvisioningWizard() {
 
       if (blufiEmitter) {
         // Listen to BOTH Status and Log
-        listeners.push(blufiEmitter.addListener("BlufiStatus", (e: any) => checkMsg(e.status)));
-        listeners.push(blufiEmitter.addListener("BlufiLog", (e: any) => checkMsg(e.log)));
+        listeners.push(
+          blufiEmitter.addListener("BlufiStatus", (e: any) =>
+            checkMsg(e.status),
+          ),
+        );
+        listeners.push(
+          blufiEmitter.addListener("BlufiLog", (e: any) => checkMsg(e.log)),
+        );
       } else {
         resolve(true); // Fallback
       }
@@ -124,7 +149,7 @@ export default function ProvisioningWizard() {
   };
 
   const requestPermissions = async () => {
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       try {
         await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
@@ -141,48 +166,52 @@ export default function ProvisioningWizard() {
 
   // ... (Scan Logic)
 
-
-
   useEffect(() => {
     requestPermissions();
 
     const listeners: any[] = [];
 
     if (blufiEmitter) {
-      listeners.push(blufiEmitter.addListener("BlufiLog", (e: any) => addLog(e.log)));
-      listeners.push(blufiEmitter.addListener("BlufiStatus", (e: any) => {
-        // Optional: Handle detailed status changes here if needed
-      }));
+      listeners.push(
+        blufiEmitter.addListener("BlufiLog", (e: any) => addLog(e.log)),
+      );
+      listeners.push(
+        blufiEmitter.addListener("BlufiStatus", (e: any) => {
+          // Optional: Handle detailed status changes here if needed
+        }),
+      );
     }
 
     if (scannerEmitter) {
-      listeners.push(scannerEmitter.addListener("DeviceFound", (device: BlufiDevice) => {
-        setDevices(prev => {
-          if (prev.find(d => d.mac === device.mac)) return prev;
-          return [...prev, device].sort((a, b) => b.rssi - a.rssi);
-        });
-      }));
-      listeners.push(scannerEmitter.addListener("ScanError", (e: any) => {
-        console.error("Scan Error", e);
-        setIsScanning(false);
-      }));
+      listeners.push(
+        scannerEmitter.addListener("DeviceFound", (device: BlufiDevice) => {
+          setDevices((prev) => {
+            if (prev.find((d) => d.mac === device.mac)) return prev;
+            return [...prev, device].sort((a, b) => b.rssi - a.rssi);
+          });
+        }),
+      );
+      listeners.push(
+        scannerEmitter.addListener("ScanError", (e: any) => {
+          console.error("Scan Error", e);
+          setIsScanning(false);
+        }),
+      );
     }
 
     return () => {
-      listeners.forEach(l => l.remove());
+      listeners.forEach((l) => l.remove());
       if (BluetoothScannerModule) BluetoothScannerModule.stopScan();
       if (BlufiBridge) BlufiBridge.disconnect();
     };
   }, []);
-
-
 
   // --- Actions: Scan ---
   const startScan = () => {
     if (BluetoothScannerModule) {
       setIsScanning(true);
       setDevices([]);
-      BluetoothScannerModule.startScan();
+      // BluetoothScannerModule.startScan();
     }
   };
 
@@ -190,7 +219,7 @@ export default function ProvisioningWizard() {
     if (BluetoothScannerModule) BluetoothScannerModule.stopScan();
     setIsScanning(false);
     setSelectedDevice(device);
-    setStep('WIFI');
+    setStep("WIFI");
   };
 
   // --- Actions: Wi-Fi Scan ---
@@ -209,19 +238,20 @@ export default function ProvisioningWizard() {
         return;
       }
 
-      if (Platform.OS === 'android') {
+      if (Platform.OS === "android") {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
             title: "Location Permission",
-            message: "This app needs location access to scan for Wi-Fi networks.",
+            message:
+              "This app needs location access to scan for Wi-Fi networks.",
             buttonNeutral: "Ask Me Later",
             buttonNegative: "Cancel",
-            buttonPositive: "OK"
-          }
+            buttonPositive: "OK",
+          },
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          addLog("Location permission denied. Wi-Fi scan may fail.", 'error');
+          addLog("Location permission denied. Wi-Fi scan may fail.", "error");
         }
       }
 
@@ -242,9 +272,12 @@ export default function ProvisioningWizard() {
       try {
         await BlufiBridge.negotiateSecurity();
         await waitForStatus("Security Result: 0", 10000); // Increased timeout to 10s
-        addLog("Security Negotiated!", 'success');
+        addLog("Security Negotiated!", "success");
       } catch (secError) {
-        addLog("Security Negotiation timed out or failed. Proceeding anyway...", 'info');
+        addLog(
+          "Security Negotiation timed out or failed. Proceeding anyway...",
+          "info",
+        );
         // We proceed because some devices might not require security or it might have already happened.
       }
 
@@ -270,32 +303,42 @@ export default function ProvisioningWizard() {
         }, 15000);
 
         // 1. Listen for "Legacy" event (if native code wasn't rebuilt)
-        const subLegacy = blufiEmitter?.addListener("BlufiDeviceScanResult", (event: any) => {
-          console.log("Got BlufiDeviceScanResult:", event);
-          if (event.data) {
-            handleResults(event.data);
-          }
-        });
+        const subLegacy = blufiEmitter?.addListener(
+          "BlufiDeviceScanResult",
+          (event: any) => {
+            console.log("Got BlufiDeviceScanResult:", event);
+            if (event.data) {
+              handleResults(event.data);
+            }
+          },
+        );
 
         // 2. Listen for "New" event (BlufiStatus) - Handle Logs and Results
-        const subStatus = blufiEmitter?.addListener("BlufiStatus", (event: any) => {
-          console.log("Got BlufiStatus:", event);
+        const subStatus = blufiEmitter?.addListener(
+          "BlufiStatus",
+          (event: any) => {
+            console.log("Got BlufiStatus:", event);
 
-          // Show Native Loops in UI
-          if (event.type === 'Log' && event.data) {
-            addLog(`[Native] ${event.data}`, 'info');
-          }
+            // Show Native Loops in UI
+            if (event.type === "Log" && event.data) {
+              addLog(`[Native] ${event.data}`, "info");
+            }
 
-          // Handle Scan Results
-          if (event.type === 'DeviceScan' && event.data) {
-            handleResults(event.data);
-          }
+            // Handle Scan Results
+            if (event.type === "DeviceScan" && event.data) {
+              handleResults(event.data);
+            }
 
-          // Handle Error Status
-          if (event.status && typeof event.status === 'string' && event.status.startsWith('Error')) {
-            addLog(`[Native Error] ${event.status}`, 'error');
-          }
-        });
+            // Handle Error Status
+            if (
+              event.status &&
+              typeof event.status === "string" &&
+              event.status.startsWith("Error")
+            ) {
+              addLog(`[Native Error] ${event.status}`, "error");
+            }
+          },
+        );
 
         const handleResults = (networks: any[]) => {
           cleanup();
@@ -306,7 +349,9 @@ export default function ProvisioningWizard() {
           networks.forEach((n: any) => {
             if (n.ssid && !unique.has(n.ssid)) unique.set(n.ssid, n);
           });
-          const sorted = Array.from(unique.values()).sort((a: any, b: any) => b.rssi - a.rssi);
+          const sorted = Array.from(unique.values()).sort(
+            (a: any, b: any) => b.rssi - a.rssi,
+          );
 
           setWifiList(sorted);
           setShowWifiList(true);
@@ -326,13 +371,12 @@ export default function ProvisioningWizard() {
       setIsWifiScanning(false);
 
       // Revert Connection Strategy: Disconnect after Scan
-      addLog("Scan complete. Disconnecting...", 'info');
+      addLog("Scan complete. Disconnecting...", "info");
       if (BlufiBridge) BlufiBridge.disconnect();
       setConnectedMac(null);
-
     } catch (e: any) {
       setIsWifiScanning(false);
-      addLog("Error requesting Wi-Fi scan: " + e.message, 'error');
+      addLog("Error requesting Wi-Fi scan: " + e.message, "error");
       Alert.alert("Scan Failed", e.message);
     }
   };
@@ -342,14 +386,12 @@ export default function ProvisioningWizard() {
     setShowWifiList(false);
   };
 
-
   // --- Actions: Provisioning ---
-
 
   const startProvisioning = async () => {
     if (!selectedDevice || !BlufiBridge) return;
-    setStep('PROVISION');
-    setProvisionState('CONNECTING');
+    setStep("PROVISION");
+    setProvisionState("CONNECTING");
     setLogs([]);
 
     try {
@@ -361,7 +403,7 @@ export default function ProvisioningWizard() {
       addLog("Waiting for Stable Connection...");
       const connected = await connectionPromise;
       if (!connected) throw new Error("Connection Timeout");
-      addLog("Stable Connection Confirmed!", 'success');
+      addLog("Stable Connection Confirmed!", "success");
 
       await sleep(1000);
 
@@ -370,19 +412,19 @@ export default function ProvisioningWizard() {
       try {
         await BlufiBridge.negotiateSecurity();
         await waitForStatus("Security Result: 0", 10000);
-        addLog("Security Negotiated!", 'success');
+        addLog("Security Negotiated!", "success");
         await sleep(1000);
       } catch (secError) {
-        addLog("Security negotiation skipped or failed. Proceeding...", 'info');
+        addLog("Security negotiation skipped or failed. Proceeding...", "info");
       } // 3. Configure Wi-Fi
-      setProvisionState('CONFIGURING');
+      setProvisionState("CONFIGURING");
 
       const configureWifi = async () => {
         addLog(`Configuring Wi-Fi: ${ssid}`);
         await BlufiBridge.configureWifi(ssid, password);
-        addLog("Wi-Fi Config Sent", 'success');
+        addLog("Wi-Fi Config Sent", "success");
 
-        addLog("Waiting 3s for device to connect...", 'info');
+        addLog("Waiting 3s for device to connect...", "info");
         await sleep(3000);
 
         addLog("Checking Device Status...");
@@ -403,29 +445,28 @@ export default function ProvisioningWizard() {
           await BlufiBridge.postCustomData(`2:${mqttPort}`);
           await BlufiBridge.postCustomData("8:0");
 
-          addLog("MQTT Config Sent & Finalized!", 'success');
+          addLog("MQTT Config Sent & Finalized!", "success");
           await sleep(2000);
         };
         await configureMqtt();
       }
 
-      addLog("All Config Sent!", 'success');
+      addLog("All Config Sent!", "success");
 
       // 4. Wait for Result
-      setProvisionState('WAITING');
+      setProvisionState("WAITING");
       addLog("Waiting for device to connect to Wi-Fi (30s)...");
 
       checkStatusLoop();
-
     } catch (error: any) {
       handleProvisionFailure(error.message || "Unknown error");
     }
   };
 
   const handleProvisionFailure = (errorMsg: string) => {
-    setProvisionState('ERROR');
-    addLog(`Error: ${errorMsg}`, 'error');
-    addLog("Disconnecting...", 'info');
+    setProvisionState("ERROR");
+    addLog(`Error: ${errorMsg}`, "error");
+    addLog("Disconnecting...", "info");
     if (BlufiBridge) BlufiBridge.disconnect();
   };
 
@@ -444,8 +485,8 @@ export default function ProvisioningWizard() {
           msg.includes("Disconnected")
         ) {
           clearInterval(interval);
-          setProvisionState('DONE');
-          addLog("✅ Device Provisioned / Rebooting!", 'success');
+          setProvisionState("DONE");
+          addLog("✅ Device Provisioned / Rebooting!", "success");
           BlufiBridge.disconnect();
         }
       });
@@ -458,9 +499,11 @@ export default function ProvisioningWizard() {
 
       if (elapsed >= timeout) {
         clearInterval(interval);
-        statusParams.forEach(s => s.remove());
-        if (provisionState !== 'DONE') {
-          handleProvisionFailure("Timeout: Device did not confirm connection in 30s.");
+        statusParams.forEach((s) => s.remove());
+        if (provisionState !== "DONE") {
+          handleProvisionFailure(
+            "Timeout: Device did not confirm connection in 30s.",
+          );
         }
         return;
       }
@@ -468,14 +511,14 @@ export default function ProvisioningWizard() {
       try {
         await BlufiBridge.postCustomData("12:");
         await BlufiBridge.requestDeviceStatus();
-      } catch (e) { }
+      } catch (e) {}
     }, intervalTime);
   };
 
   const resetFlow = () => {
     if (BlufiBridge) BlufiBridge.disconnect();
-    setStep('SCAN');
-    setProvisionState('IDLE');
+    setStep("SCAN");
+    setProvisionState("IDLE");
     setSelectedDevice(null);
     startScan();
   };
@@ -490,13 +533,18 @@ export default function ProvisioningWizard() {
   );
 
   const renderScanStep = () => {
-    const filtered = devices.filter(d =>
-      filterUid ? (d.name.includes(filterUid) || d.mac.includes(filterUid)) : true
+    const filtered = devices.filter((d) =>
+      filterUid
+        ? d.name.includes(filterUid) || d.mac.includes(filterUid)
+        : true,
     );
 
     return (
       <View style={styles.stepContainer}>
-        {renderHeader("Select Device", "Scan the device UID or select from list.")}
+        {renderHeader(
+          "Select Device",
+          "Scan the device UID or select from list.",
+        )}
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Filter by UID</Text>
@@ -509,44 +557,78 @@ export default function ProvisioningWizard() {
         </View>
 
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Nearby Devices ({filtered.length})</Text>
+          <Text style={styles.listTitle}>
+            Nearby Devices ({filtered.length})
+          </Text>
           <TouchableOpacity onPress={startScan} disabled={isScanning}>
-            {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Text style={styles.linkText}>Refresh</Text>}
+            {isScanning ? (
+              <ActivityIndicator size="small" color={THEME.primary} />
+            ) : (
+              <Text style={styles.linkText}>Refresh</Text>
+            )}
           </TouchableOpacity>
         </View>
 
         <FlatList
           data={filtered}
-          keyExtractor={item => item.mac}
+          keyExtractor={(item) => item.mac}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.deviceCard} onPress={() => handleSelectDevice(item)}>
+            <TouchableOpacity
+              style={styles.deviceCard}
+              onPress={() => handleSelectDevice(item)}
+            >
               <View>
-                <Text style={styles.deviceName}>{item.name || "Unknown Device"}</Text>
+                <Text style={styles.deviceName}>
+                  {item.name || "Unknown Device"}
+                </Text>
                 <Text style={styles.deviceMac}>{item.mac}</Text>
               </View>
               <Text style={styles.deviceRssi}>{item.rssi} dBm</Text>
             </TouchableOpacity>
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No devices found. Ensure Bluetooth is on.</Text>}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No devices found. Ensure Bluetooth is on.
+            </Text>
+          }
         />
       </View>
     );
   };
 
   const renderWifiStep = () => (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.stepContainer}>
-      <TouchableOpacity onPress={() => setStep('SCAN')} style={styles.backButton}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.stepContainer}
+    >
+      <TouchableOpacity
+        onPress={() => setStep("SCAN")}
+        style={styles.backButton}
+      >
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      {renderHeader("Configure Wi-Fi", `Connect ${selectedDevice?.name} to your network.`)}
+      {renderHeader(
+        "Configure Wi-Fi",
+        `Connect ${selectedDevice?.name} to your network.`,
+      )}
 
       <View style={styles.form}>
         <View style={styles.inputGroup}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text style={styles.label}>Wi-Fi SSID</Text>
             <TouchableOpacity onPress={scanForWifi} disabled={isWifiScanning}>
-              {isWifiScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Text style={styles.linkText}>Scan Networks</Text>}
+              {isWifiScanning ? (
+                <ActivityIndicator size="small" color={THEME.primary} />
+              ) : (
+                <Text style={styles.linkText}>Scan Networks</Text>
+              )}
             </TouchableOpacity>
           </View>
           <TextInput
@@ -591,7 +673,10 @@ export default function ProvisioningWizard() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={startProvisioning}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={startProvisioning}
+        >
           <Text style={styles.primaryButtonText}>Provision Device</Text>
         </TouchableOpacity>
       </View>
@@ -599,14 +684,16 @@ export default function ProvisioningWizard() {
       <Text style={[styles.label, { marginTop: 20 }]}>Logs</Text>
       <FlatList
         data={logs}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={[styles.logs, { maxHeight: 150 }]}
         renderItem={({ item }) => (
-          <Text style={[
-            styles.logText,
-            item.type === 'error' && styles.logError,
-            item.type === 'success' && styles.logSuccess
-          ]}>
+          <Text
+            style={[
+              styles.logText,
+              item.type === "error" && styles.logError,
+              item.type === "success" && styles.logSuccess,
+            ]}
+          >
             {item.msg}
           </Text>
         )}
@@ -626,12 +713,17 @@ export default function ProvisioningWizard() {
               data={wifiList}
               keyExtractor={(item, index) => item.ssid + index}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.wifiItem} onPress={() => selectWifi(item)}>
+                <TouchableOpacity
+                  style={styles.wifiItem}
+                  onPress={() => selectWifi(item)}
+                >
                   <Text style={styles.wifiSsid}>{item.ssid}</Text>
                   <Text style={styles.wifiRssi}>{item.rssi} dBm</Text>
                 </TouchableOpacity>
               )}
-              ListEmptyComponent={<Text style={styles.emptyText}>No networks found.</Text>}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>No networks found.</Text>
+              }
             />
           </View>
         </View>
@@ -641,14 +733,21 @@ export default function ProvisioningWizard() {
 
   const renderProvisionStep = () => (
     <View style={styles.stepContainer}>
-      {renderHeader("Provisioning", provisionState === 'DONE' ? "Process Complete" : "Please wait...")}
+      {renderHeader(
+        "Provisioning",
+        provisionState === "DONE" ? "Process Complete" : "Please wait...",
+      )}
 
       <View style={styles.progressCard}>
         <View style={styles.statusIndicator}>
-          {provisionState === 'ERROR' ? (
-            <Text style={[styles.statusTitle, { color: THEME.error }]}>Failed</Text>
-          ) : provisionState === 'DONE' ? (
-            <Text style={[styles.statusTitle, { color: THEME.success }]}>Success!</Text>
+          {provisionState === "ERROR" ? (
+            <Text style={[styles.statusTitle, { color: THEME.error }]}>
+              Failed
+            </Text>
+          ) : provisionState === "DONE" ? (
+            <Text style={[styles.statusTitle, { color: THEME.success }]}>
+              Success!
+            </Text>
           ) : (
             <>
               <ActivityIndicator size="large" color={THEME.primary} />
@@ -660,20 +759,22 @@ export default function ProvisioningWizard() {
         <Text style={styles.label}>Logs</Text>
         <FlatList
           data={logs}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           style={styles.logs}
           renderItem={({ item }) => (
-            <Text style={[
-              styles.logText,
-              item.type === 'error' && styles.logError,
-              item.type === 'success' && styles.logSuccess
-            ]}>
+            <Text
+              style={[
+                styles.logText,
+                item.type === "error" && styles.logError,
+                item.type === "success" && styles.logSuccess,
+              ]}
+            >
               {item.msg}
             </Text>
           )}
         />
 
-        {(provisionState === 'DONE' || provisionState === 'ERROR') && (
+        {(provisionState === "DONE" || provisionState === "ERROR") && (
           <TouchableOpacity style={styles.secondaryButton} onPress={resetFlow}>
             <Text style={styles.secondaryButtonText}>Done / Start Over</Text>
           </TouchableOpacity>
@@ -684,9 +785,9 @@ export default function ProvisioningWizard() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {step === 'SCAN' && renderScanStep()}
-      {step === 'WIFI' && renderWifiStep()}
-      {step === 'PROVISION' && renderProvisionStep()}
+      {step === "SCAN" && renderScanStep()}
+      {step === "WIFI" && renderWifiStep()}
+      {step === "PROVISION" && renderProvisionStep()}
     </SafeAreaView>
   );
 }
@@ -706,7 +807,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: "700",
     color: THEME.text,
     marginBottom: 5,
   },
@@ -723,10 +824,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: THEME.textSecondary,
     marginBottom: 8,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   input: {
     backgroundColor: THEME.card,
@@ -741,7 +842,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   divider: {
     height: 1,
@@ -753,7 +854,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.primary,
     padding: 18,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -762,19 +863,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   primaryButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   secondaryButton: {
     marginTop: 20,
     padding: 15,
-    alignItems: 'center',
+    alignItems: "center",
   },
   secondaryButtonText: {
     color: THEME.primary,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   backButton: {
     marginBottom: 10,
@@ -785,18 +886,18 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: THEME.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   // List
   listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   listTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: THEME.text,
   },
   deviceCard: {
@@ -804,11 +905,11 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -817,7 +918,7 @@ const styles = StyleSheet.create({
   },
   deviceName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: THEME.text,
   },
   deviceMac: {
@@ -828,10 +929,10 @@ const styles = StyleSheet.create({
   deviceRssi: {
     fontSize: 14,
     color: THEME.textSecondary,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   emptyText: {
-    textAlign: 'center',
+    textAlign: "center",
     color: THEME.textSecondary,
     marginTop: 30,
   },
@@ -843,26 +944,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusIndicator: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   statusTitle: {
     marginTop: 15,
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     color: THEME.text,
   },
   logs: {
     flex: 1,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: "#F9F9F9",
     borderRadius: 8,
     padding: 10,
   },
   logText: {
     fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     marginBottom: 4,
-    color: '#333',
+    color: "#333",
   },
   logError: {
     color: THEME.error,
@@ -872,25 +973,25 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: THEME.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    height: '60%',
+    height: "60%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 15,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   closeText: {
     color: THEME.primary,
@@ -900,14 +1001,14 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: THEME.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   wifiSsid: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   wifiRssi: {
     color: THEME.textSecondary,
-  }
+  },
 });
