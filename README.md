@@ -70,4 +70,10 @@ For detailed API reference and kit-specific instructions, see the [Blufi Kit REA
 
 ---
 
+## 📄 License & Contributing
+
+This project is licensed under the **MIT License**. We welcome contributions - please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+---
+
 _Maintained by majharuli0_
