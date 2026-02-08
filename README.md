@@ -1,83 +1,73 @@
-# Blufi Integration Kit for React Native
+# 📟 Blufi Test App
 
-This kit contains everything you need to add Espressif Blufi (Wi-Fi Provisioning) support to your React Native app (iOS & Android).
+A modern, streamlined reference implementation for **Espressif Blufi (Wi-Fi Provisioning)** in React Native.
 
-## 📦 Contents
-*   `ios-reference/`: Native iOS source files (Swift/Obj-C) and Podspec.
-*   `scripts/`: Automation scripts for setting up Android and iOS.
-*   `BlufiClient.ts`: A ready-to-use TypeScript client for managing the connection.
+This application demonstrates a high-performance, multi-page provisioning flow using `expo-router` and a shared `ProvisioningContext`. It is built on top of the localized `blufi` kit included in this repository.
 
-## 🚀 Installation Guide
+---
 
-### 1. Copy Files
-Copy the contents of this folder (`ios-reference`, `scripts`, `BlufiClient.ts`) into the **root** of your React Native project.
+## ✨ Key Features
 
-```bash
-cp -r blufi-kit/* /path/to/your/project/
-```
+- 🎯 **Single-Purpose UI**: Streamlined interface focused entirely on the provisioning flow.
+- 🔄 **Multi-Page Navigation**: Clean separation into Scan, Configure, Provision, and Success screens.
+- 🍎 **Robust iOS Detection**: Fixed the "waiting for device reboot" hang using native `CBCentralManagerDelegate` listeners.
+- 🤖 **Unified Logging**: Real-time debug console capturing native events from both iOS and Android in one view.
+- 🆔 **UID Capture**: Automated 12-digit Device UID extraction via custom data polling.
+
+---
+
+## 🛠 Project Structure
+
+- **/blufi**: The core **React Native Blufi Kit**. Contains the native bridges and SDK reference.
+- **/app/(tabs)/explore**: The main provisioning flow implementation.
+- **/components**: Shared UI components and icons.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+
+Ensure you have the latest Expo CLI and native build tools (Xcode/Android Studio) installed.
 
 ### 2. Install Dependencies
-Ensure you have the required packages installed:
+
 ```bash
-npm install react-native-permissions
+npm install
 ```
 
-### 3. Configure `package.json`
-Add the setup scripts to your `package.json` under the `"scripts"` section:
+### 3. Initialize Native Bridge
 
-```json
-"scripts": {
-  "setup:ios": "node scripts/setup-ios.js",
-  "setup:android": "node scripts/setup-android.js"
-}
-```
+The Blufi bridge must be patched into the native project folders:
 
-### 4. Run Setup
-Run the setup commands to generate the native code and configuration.
-
-**For iOS:**
 ```bash
-# 1. Generate iOS project (if not already done)
-npx expo prebuild --platform ios
+# Generate native folders (if not present)
+npx expo prebuild
 
-# 2. Run the setup script
+# Patch Blufi native code
 npm run setup:ios
+npm run setup:android
 
-# 3. Install Pods
+# Link iOS (Required)
 cd ios && pod install && cd ..
 ```
 
-**For Android:**
+### 4. Run the App
+
 ```bash
-# 1. Generate Android project (if not already done)
-npx expo prebuild --platform android
+# iOS
+npx expo run:ios --device
 
-# 2. Run the setup script
-npm run setup:android
+# Android
+npx expo run:android
 ```
 
-### 5. Usage
-Import `BlufiClient` in your code and use it to connect and provision devices.
+---
 
-```typescript
-import { BlufiClient } from './BlufiClient';
+## 📚 Documentation
 
-// Initialize
-const blufi = BlufiClient.getInstance();
+For detailed API reference and kit-specific instructions, see the [Blufi Kit README](./blufi/README.md).
 
-// Scan
-blufi.startScan((device) => {
-  console.log('Found:', device.name);
-});
+---
 
-// Connect & Provision
-await blufi.connect(deviceMac);
-await blufi.negotiateSecurity();
-await blufi.configureWifi('SSID', 'PASSWORD');
-```
-
-## 🛠 Troubleshooting
-
-*   **iOS Build Error (Developer Mode)**: Go to Settings > Privacy & Security > Developer Mode on your iPhone and enable it.
-*   **iOS Runtime Error (Module not found)**: Ensure you ran `pod install` inside `ios/` after running `npm run setup:ios`.
-*   **Android Build Error**: Ensure `npx expo prebuild` was run to create the `android` folder before running `setup:android`.
+_Maintained by majharuli0_
